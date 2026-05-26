@@ -9,7 +9,7 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 
 ## Directory Structure
 
-\`\`\`text
+```text
 📁 project-root/
 ├── 📁 01_context/               # The "Knowledge Base" (Read-Only for task agents)
 │   ├── rules.md                 # General project constraints and coding/writing standards
@@ -28,7 +28,7 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 │   └── (compiled code, final docs, etc.)
 ├── 00_DASHBOARD.md              # Executive summary updated automatically/manually
 └── README.md                    # Main entry point with links
-\`\`\`
+```
 
 ## Detailed Usage Guidelines
 
