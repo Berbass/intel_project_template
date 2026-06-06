@@ -22,9 +22,9 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 │   └── 📁 3_done/               # Completed and validated tasks
 ├── 📁 03_workspace/             # The "Scratchpad"
 │   └── draft_feature.md         # Temporary area for agents to iterate, brainstorm, or generate code
-├── 📁 04_documentation/         # Project meta-documentation
+├── 📁 01_context/documentation/         # Project meta-documentation
 │   └── project_structure_guidelines.md (This file)
-├── 📁 05_deliverables/          # The final output
+├── 📁 04_deliverables/          # The final output
 │   └── (compiled code, final docs, etc.)
 ├── 00_DASHBOARD.md              # Executive summary updated automatically/manually
 └── README.md                    # Main entry point with links
