@@ -11,23 +11,22 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 
 ```text
 📁 project-root/
-├── 📁 01_context/               # The "Knowledge Base" (Read-Only for task agents)
-│   ├── rules.md                 # General project constraints and coding/writing standards
-│   ├── glossary.md              # Domain-specific terminology
-│   └── 📁 adr/                  # Architecture Decision Records (Historical choices)
-├── 📁 02_tasks/                 # The Backlog & Workflow (State Management)
-│   ├── 📁 0_todo/               # Tasks ready to be picked up
-│   ├── 📁 1_in_progress/        # Tasks currently being worked on by an agent or human
-│   ├── 📁 2_in_review/          # Tasks awaiting QA or peer review
-│   └── 📁 3_done/               # Completed and validated tasks
-├── 📁 03_workspace/             # The "Scratchpad"
-│   └── draft_feature.md         # Temporary area for agents to iterate, brainstorm, or generate code
-├── 📁 01_context/documentation/         # Project meta-documentation
-│   └── project_structure_guidelines.md (This file)
-├── 📁 04_deliverables/          # The final output
-│   └── (compiled code, final docs, etc.)
-├── 00_DASHBOARD.md              # Executive summary updated automatically/manually
-└── README.md                    # Main entry point with links
+├── 📁 01_context/                 # The "Knowledge Base" (Read-Only for task agents)
+│   ├── rules.md                   # Project rules & git submodule protocol
+│   ├── glossary.md                # Domain-specific and technical terminology
+│   ├── 📁 adr/                    # Architecture Decision Records (Historical choices)
+│   └── 📁 documentation/          # Project specifications and guidelines
+│       ├── global_specifications.md
+│       └── project_structure_guidelines.md
+├── 📁 02_tasks/                   # The Backlog & Workflow (State Management)
+│   ├── 📁 0_todo/                 # Tasks ready to be picked up
+│   ├── 📁 1_in_progress/          # Tasks currently being worked on
+│   ├── 📁 2_in_review/            # Tasks awaiting QA or peer review
+│   └── 📁 3_done/                 # Completed and validated tasks
+├── 📁 03_workspace/               # The "Scratchpad" & Task Submodules
+│   └── 📁 T-015_repo_name/        # Isolated Git submodule for active task
+├── 00_DASHBOARD.md                # Executive summary of project state
+└── README.md                      # Main entry point with links
 ```
 
 ## Detailed Usage Guidelines
@@ -36,9 +35,8 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 
 This directory acts as the foundational knowledge for any AI agent joining the project.
 
-* **Usage:** Before starting any task, agents are instructed to read relevant files here to align with project rules, tone, and historical decisions.
-
-* **The `adr/` subfolder:** Contains *Architecture Decision Records*. Every major choice (e.g., "Why we chose React over Vue") is documented here as a numbered file (e.g., `001-frontend-framework.md`). This prevents agents from revisiting settled debates or making inconsistent suggestions.
+- **Usage:** Before starting any task, agents are instructed to read relevant files here (`rules.md`, `project_structure_guidelines.md`, `glossary.md`, `global_specifications.md`) to align with project rules, tone, and historical decisions.
+- **The `adr/` subfolder:** Contains _Architecture Decision Records_. Every major choice (e.g., "Why we chose Flutter over React Native") is documented here as a numbered file (e.g., `001-frontend-framework.md`). This prevents agents from revisiting settled debates.
 
 ### 2. `02_tasks/` (The Engine)
 
@@ -46,53 +44,54 @@ This is where the actual project management happens. We move `.md` files between
 
 #### The YAML Frontmatter Rule
 
-**Every** file inside the `02_tasks/` directory **MUST** begin with a YAML Frontmatter block. This is critical for AI agents to quickly parse metadata without reading the entire document.
+**Every** file inside the `02_tasks/` directory **MUST** begin with a YAML Frontmatter block.
 
 **Template for a Task File (`task_xxx.md`):**
 
-\`\`\`yaml
+```yaml
 ---
 id: T-015
-title: "Implement User Authentication"
+title: "Implement Gasless Permit Execution in Relayer"
 status: in_progress
 assigned_to: agent_backend
-dependencies: [T-010, T-012]
+dependencies: [T-010]
+target_repo: "https://github.com/organization/repo_name"
 completion_percentage: 50%
-last_updated: 2026-05-27
+last_updated: 2026-08-19
 ---
-\`\`\`
 
 # Objective
+
 Briefly describe what needs to be achieved.
 
 # Acceptance Criteria
+
 - [x] Criterion 1 completed
 - [ ] Criterion 2 pending
 
 # Agent Execution Log
-*Optional: Agents can append notes here regarding their thought process, blockers, or why they paused execution.*
 
+_Notes regarding thought process, blockers, or execution details._
+```
 
 #### Workflow Execution
 
 1. An agent picks a file from `0_todo/`.
+2. The agent updates the YAML `status` to `in_progress` and **physically moves** the file to `1_in_progress/`.
+3. If code changes are required, the agent instantiates a Git submodule in `03_workspace/` (see section 3 below).
+4. Once the Acceptance Criteria are met and tests pass, the agent updates `status` to `in_review` and moves the file to `2_in_review/`.
+5. A reviewer validates the work. If approved, it moves to `3_done/`.
 
-2. The agent updates the YAML `status` to `in_progress` and **physically moves** the file to the `1_in_progress/` directory.
+### 3. `03_workspace/` (The Scratchpad & Task Submodules)
 
-3. The agent executes the work (often drafting in the `03_workspace/`).
+Agents use this directory for drafting intermediate work, code experiments, and isolated repository submodules.
 
-4. Once the Acceptance Criteria are met, the agent updates the `status` to `in_review` and moves the file to `2_in_review/`.
-
-5. A QA agent (or human) reviews the work. If approved, it moves to `3_done/`.
-
-### 3. `03_workspace/` (The Scratchpad)
-
-Agents generate intermediate thoughts, partial code snippets, or rough drafts here.
-
-* **Usage:** This prevents cluttering the final deliverables or the task descriptions. Files here are considered ephemeral and can be overwritten or deleted once the task is marked as `done`.
+- **Git Submodule Strategy:** For any task involving code changes in an external repository (e.g., `repo_contracts`, `repo_backend`, `repo_app`), the agent creates a submodule inside `03_workspace/`.
+- **Directory Naming Strategy:**
+  `03_workspace/<TASK_ID>_<repo_name>` (e.g., `03_workspace/T-015_repo_name`).
+- **Branch Naming Strategy:**
+  `<type>/<TASK_ID>-<short-description>` (e.g., `feature/T-015-gasless-permit`, `fix/T-016-pin-crypto`).
 
 ### 4. `00_DASHBOARD.md` (The Overview)
 
-A high-level summary of the project state.
-
-* **Usage:** Can be maintained by a "Project Manager" AI agent. It parses the `02_tasks/` directory periodically to aggregate metrics (e.g., "5 tasks in progress, 2 blocked") for human oversight.
+A high-level summary of the project state aggregated from `02_tasks/`.
