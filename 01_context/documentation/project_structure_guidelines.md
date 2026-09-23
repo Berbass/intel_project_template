@@ -12,7 +12,7 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 ```text
 📁 project-root/
 ├── 📁 01_context/                 # The "Knowledge Base" (Read-Only for task agents)
-│   ├── rules.md                   # Project rules & git submodule protocol
+│   ├── rules.md                   # Project rules & git worktree/submodule protocol
 │   ├── glossary.md                # Domain-specific and technical terminology
 │   ├── 📁 adr/                    # Architecture Decision Records (Historical choices)
 │   └── 📁 documentation/          # Project specifications and guidelines
@@ -23,8 +23,8 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 │   ├── 📁 1_in_progress/          # Tasks currently being worked on
 │   ├── 📁 2_in_review/            # Tasks awaiting QA or peer review
 │   └── 📁 3_done/                 # Completed and validated tasks
-├── 📁 03_workspace/               # The "Scratchpad" & Task Submodules
-│   └── 📁 T-015_repo_name/        # Isolated Git submodule for active task
+├── 📁 03_workspace/               # The "Scratchpad" & Task Worktrees
+│   └── 📁 T-015_repo_name/        # Isolated Git worktree for active task
 ├── 00_DASHBOARD.md                # Executive summary of project state
 └── README.md                      # Main entry point with links
 ```
@@ -78,19 +78,20 @@ _Notes regarding thought process, blockers, or execution details._
 
 1. An agent picks a file from `0_todo/`.
 2. The agent updates the YAML `status` to `in_progress` and **physically moves** the file to `1_in_progress/`.
-3. If code changes are required, the agent instantiates a Git submodule in `03_workspace/` (see section 3 below).
+3. If code changes are required, the agent instantiates a Git worktree in `03_workspace/` (see section 3 below); submodules are used only for the genuine multi-repo case.
 4. Once the Acceptance Criteria are met and tests pass, the agent updates `status` to `in_review` and moves the file to `2_in_review/`.
 5. A reviewer validates the work. If approved, it moves to `3_done/`.
 
-### 3. `03_workspace/` (The Scratchpad & Task Submodules)
+### 3. `03_workspace/` (The Scratchpad & Task Worktrees)
 
-Agents use this directory for drafting intermediate work, code experiments, and isolated repository submodules.
+Agents use this directory for drafting intermediate work, code experiments, and isolated per-task working directories.
 
-- **Git Submodule Strategy:** For any task involving code changes in an external repository (e.g., `repo_contracts`, `repo_backend`, `repo_app`), the agent creates a submodule inside `03_workspace/`.
+- **Git Worktree Strategy (default):** For a task changing a single target repository on its own branch, the agent creates a Git _worktree_ inside `03_workspace/`. Each task gets an isolated working directory and branch backed by one shared object store (see ADR-001 and `rules.md` §1). Submodules are reserved for the genuine multi-repo case.
 - **Directory Naming Strategy:**
   `03_workspace/<TASK_ID>_<repo_name>` (e.g., `03_workspace/T-015_repo_name`).
 - **Branch Naming Strategy:**
   `<type>/<TASK_ID>-<short-description>` (e.g., `feature/T-015-gasless-permit`, `fix/T-016-pin-crypto`).
+- **Setup / Teardown:** Always pair `git worktree add` with a mirrored `git worktree remove` + branch deletion once the task reaches `3_done/`, so the scratchpad never accumulates stale checkouts. See `rules.md` §1.3 for the exact commands.
 
 ### 4. `00_DASHBOARD.md` (The Overview)
 

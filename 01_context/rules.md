@@ -1,14 +1,29 @@
 # Project Rules & Development Standards
 
-## 1. Agent Execution & Git Submodule Workflow
+## 1. Agent Execution & Git Worktree Workflow
 
-To maintain clean separation and enable isolated, concurrent task execution:
+To maintain clean separation and enable isolated, concurrent task execution, the
+workspace for code changes lives under `03_workspace/`.
 
-When an AI agent (or human developer) picks up a task involving code changes, it **must** instantiate a Git submodule within `03_workspace/`.
+**Default: Git worktrees.** The common case is a single target repository worked
+on across many concurrent task branches. For this case an agent (or human
+developer) picking up a task involving code changes **must** create a Git
+_worktree_ per task inside `03_workspace/`. A worktree gives each task an
+isolated working directory and its own branch while sharing one local object
+store — far less metadata churn than submodules (see ADR-001, §Decision.3).
+
+**Exception: Git submodules for genuine multi-repo tasks.** Reach for a submodule
+_only_ when a task must coordinate changes across _distinct_ repositories that
+need to be vendored/pinned inside the orchestrator. Do not use submodules for the
+ordinary single-repo, many-branches case.
+
+Always pair setup with mirrored teardown (§1.3) so `03_workspace/` never
+accumulates stale checkouts.
 
 ### 1.1. Directory Naming Strategy
 
-Submodule directories inside `03_workspace/` must follow the format:
+Worktree (and, in the multi-repo exception, submodule) directories inside
+`03_workspace/` must follow the format:
 
 $$\text{03\_workspace/}\langle\text{TASK\_ID}\rangle\_\langle\text{repo\_name}\rangle$$
 
@@ -20,7 +35,7 @@ $$\text{03\_workspace/}\langle\text{TASK\_ID}\rangle\_\langle\text{repo\_name}\r
 
 ### 1.2. Branch Naming Strategy
 
-Within the submodule, the agent must check out a working branch named according to the following conventions:
+Within the worktree (or, in the multi-repo exception, the submodule), the agent must check out a working branch named according to the following conventions:
 
 $$\langle\text{type}\rangle/\langle\text{TASK\_ID}\rangle\text{-}\langle\text{short-kebab-description}\rangle$$
 
@@ -51,18 +66,39 @@ $$\langle\text{type}\rangle/\langle\text{TASK\_ID}\rangle\text{-}\langle\text{sh
    the resulting context, decisions, and constraints into account. Do not begin
    implementation until every direct dependency is understood (and, where
    required, completed).
-4. **Create Submodule:**
+4. **Create Worktree (default):** From a local clone of the target repository,
+   create the isolated worktree and its task branch in a single step:
+    ```bash
+    git worktree add -b <type>/<TASK_ID>-<short-description> \
+      <orchestrator_root>/03_workspace/<TASK_ID>_<repo_name> main
+    ```
+    _Multi-repo exception only:_ if the task genuinely spans distinct
+    repositories, add a submodule instead and branch inside it:
     ```bash
     git submodule add <repo_url> 03_workspace/<TASK_ID>_<repo_name>
-    ```
-5. **Checkout Task Branch:**
-    ```bash
     cd 03_workspace/<TASK_ID>_<repo_name>
     git checkout -b <type>/<TASK_ID>-<short-description>
     ```
-6. **Develop & Validate:** Implement changes, run local unit/integration tests within the submodule.
-7. **Commit & Push:** Commit inside the submodule following the Semantic Commit message convention with explicit reference to the linked task ID(s) (see Section 3).
-8. **Task Review:** Update task metadata in `02_tasks/` and move the task file to `02_tasks/2_in_review/`.
+5. **Develop & Validate:** Implement changes and run local unit/integration tests
+   within the worktree.
+6. **Commit & Push:** Commit inside the worktree following the Semantic Commit
+   message convention with explicit reference to the linked task ID(s) (see
+   Section 3).
+7. **Task Review:** Update task metadata in `02_tasks/` and move the task file to
+   `02_tasks/2_in_review/`.
+8. **Teardown (on completion):** Once the task is merged and promoted to
+   `3_done/`, remove its worktree and delete the task branch so `03_workspace/`
+   stays clean. Setup and teardown must mirror each other:
+    ```bash
+    # From the target repository clone:
+    git worktree remove 03_workspace/<TASK_ID>_<repo_name>
+    git branch -d <type>/<TASK_ID>-<short-description>
+    git worktree prune
+    git push origin --delete <type>/<TASK_ID>-<short-description>  # drop merged remote branch
+    ```
+    _Multi-repo exception:_ deinitialize and remove the submodule instead
+    (`git submodule deinit <path>`, `git rm 03_workspace/<TASK_ID>_<repo_name>`,
+    and drop its `.gitmodules` entry).
 
 ### 1.4. Task Creation & Dependency Maintenance
 
