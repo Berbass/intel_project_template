@@ -86,9 +86,11 @@ $$\langle\text{type}\rangle/\langle\text{TASK\_ID}\rangle\text{-}\langle\text{sh
    Section 3).
 7. **Task Review:** Update task metadata in `02_tasks/` and move the task file to
    `02_tasks/2_in_review/`.
-8. **Teardown (on completion):** Once the task is merged and promoted to
-   `3_done/`, remove its worktree and delete the task branch so `03_workspace/`
-   stays clean. Setup and teardown must mirror each other:
+8. **Teardown (mandatory on completion):** A task's workspace **must not** outlive
+   its promotion to `3_done/`. As soon as the task is merged and promoted, remove
+   its worktree and delete the task branch so `03_workspace/` never accumulates
+   stale checkouts. Setup and teardown must mirror each other:
+
     ```bash
     # From the target repository clone:
     git worktree remove 03_workspace/<TASK_ID>_<repo_name>
@@ -96,9 +98,14 @@ $$\langle\text{type}\rangle/\langle\text{TASK\_ID}\rangle\text{-}\langle\text{sh
     git worktree prune
     git push origin --delete <type>/<TASK_ID>-<short-description>  # drop merged remote branch
     ```
+
     _Multi-repo exception:_ deinitialize and remove the submodule instead
     (`git submodule deinit <path>`, `git rm 03_workspace/<TASK_ID>_<repo_name>`,
     and drop its `.gitmodules` entry).
+
+    To audit or enforce this mandate in bulk, run the zero-dependency helper
+    `python3 scripts/prune_workspace.py` (dry-run) or `--apply` to remove the
+    worktrees of every task already in `3_done/`.
 
 ### 1.4. Task Creation & Dependency Maintenance
 
