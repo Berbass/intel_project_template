@@ -129,6 +129,12 @@ A task sitting in `02_tasks/2_in_review/` is not complete until a reviewer (huma
 or agent, **other than** the implementer wherever possible) validates it and
 promotes it to `3_done/`. Reviews follow this protocol:
 
+**Review-queue ordering (topological).** When multiple tasks await review, process
+them in dependency order — a task's upstream dependencies must be reviewed and
+merged before the task itself. Never promote a task ahead of an unreviewed
+dependency, because its diff and validation assume the upstream change is already
+on `main`.
+
 1. **Sync Context:** As in §1.3, re-read `rules.md` and the ADRs in
    `01_context/adr/` so the review applies the latest rules and decisions.
 2. **Verify Acceptance Criteria:** Walk every checkbox in the task's
@@ -138,11 +144,18 @@ promotes it to `3_done/`. Reviews follow this protocol:
    Log as a claim to be re-confirmed, never as proof. Inspect the actual files
    and diff, and independently re-run the relevant validation from a clean state,
    for example:
-    - Code: `npm ci` (or equivalent), build, lint, and tests; run any codegen the
-      build depends on (e.g. `prisma generate`).
-    - Git/infra: confirm branch/commit topology, submodule gitlink consistency
-      (working checkout == recorded gitlink == remote), repository visibility, and
-      access assumptions (e.g. an anonymous fetch fails when the repo is private).
+    - Code: run the repo's validation from a clean state — `npm ci` (or
+      equivalent), build, lint, tests, and any codegen the build depends on (e.g.
+      `prisma generate`). Validation must be **zero-warning**, not merely
+      zero-error. Run it through the project's shared tooling / runtime seam (the
+      agreed interpreter, virtualenv, or task runner) rather than an ad-hoc local
+      environment, so results are reproducible across reviewers.
+    - Git/infra: confirm branch/commit topology and that the task branch is based
+      on current `main`. For worktree tasks, verify the worktree is clean and its
+      branch pushed; for the multi-repo exception, verify submodule gitlink
+      consistency (working checkout == recorded gitlink == remote). Confirm
+      repository visibility and access assumptions (e.g. an anonymous fetch fails
+      when the repo is private).
 4. **Security & Scope Check:** Confirm no secrets, keys, or `.env` files were
    committed (§2), and that the change stays within the task's scope. Note any
    scope creep or out-of-scope drift explicitly.
@@ -158,22 +171,41 @@ promotes it to `3_done/`. Reviews follow this protocol:
       file to `02_tasks/1_in_progress/`, and record the required changes in the
       Review Log. The task re-enters review once addressed.
     - **Approve:** proceed to the Approval Actions below.
-7. **Approval Actions (on approve):**
+7. **Approval Actions (on approve).** Releases happen in two tiers — first the
+   **target repo(s)**, then the **orchestrator repo** — and a task is not promoted
+   until both are reconciled:
+
+    **Tier 1 — Target-repo release:**
     1. **Merge & Release** the task branch into the target repo's default branch
-       (`main`), push it, and delete the merged branch (remote and local).
-    2. **Reconcile Submodules:** update the canonical/main-tracking submodule
-       gitlink to the merged commit, and remove any now-redundant per-task
-       submodule from `03_workspace/` and `.gitmodules`.
-    3. **Promote the Task:** set `status: done` and move the file to
+       (`main`), push it, and delete the merged branch (remote and local). For a
+       cross-repo task, repeat this for every target repo it touches.
+    2. **Tear down the workspace:** remove the task worktree and prune per §1.3
+       step 8 (mandatory; `scripts/prune_workspace.py` can audit/enforce it).
+       _Multi-repo exception:_ instead update the canonical submodule gitlink to
+       the merged commit and remove the per-task submodule from `03_workspace/`
+       and `.gitmodules`.
+
+    **Tier 2 — Orchestrator reconciliation:**
+
+    3. **Context & Spec Reconciliation gate (before promotion):** confirm the
+       orchestrator knowledge base is internally consistent with the merged
+       change — a `grep` across `01_context/` for the deprecated/superseded terms
+       the task was meant to remove returns **zero** results, cross-references
+       still resolve, and any ADR the change invalidates has been _superseded_
+       (not edited in place) per the guidelines. Do not promote while this gate is
+       red.
+    4. **Promote the Task:** set `status: done` and `review_status: approved`,
+       fill `reviewed_by` / `reviewed_at`, and move the file to
        `02_tasks/3_done/`.
-    4. **Keep the Dashboard in Sync:** update `00_DASHBOARD.md` (status column and
+    5. **Keep the Dashboard in Sync:** update `00_DASHBOARD.md` (status column and
        phase narrative), consistent with §1.4.
-    5. **Open Follow-ups:** create any deferred/out-of-scope tasks identified in
+    6. **Open Follow-ups:** create any deferred/out-of-scope tasks identified in
        triage (§1.4), so nothing is silently dropped.
+
 8. **Record a Review Log:** append a dated `# Review Log` section to the task file
    capturing what was independently verified, the decision, the merge/release
-   details (commit SHAs, branch cleanup, submodule changes), and any follow-up
-   task IDs created.
+   details (commit SHAs, branch cleanup, worktree teardown — submodule changes
+   only in the multi-repo exception), and any follow-up task IDs created.
 
 > **Reviewer independence:** The value of a review comes from re-deriving the
 > result, not re-reading the claim. Always reproduce validation and inspect the
@@ -191,7 +223,7 @@ promotes it to `3_done/`. Reviews follow this protocol:
 
 ## 3. Commit Message Standards (Semantic Commits with Task References)
 
-All commit messages across all repositories (main orchestrator and task submodules) must follow the **Conventional / Semantic Commits** specification and **imperatively include a contextual scope along with the linked task ID(s)** at the end of the subject line.
+All commit messages across all repositories (the orchestrator repo and its task worktrees; submodules only in the multi-repo exception) must follow the **Conventional / Semantic Commits** specification and **imperatively include a contextual scope along with the linked task ID(s)** at the end of the subject line.
 
 ### 3.1. Commit Format
 
@@ -230,3 +262,25 @@ All commit messages across all repositories (main orchestrator and task submodul
 - `fix(pinCrypto): resolve aes-256 decryption padding on mobile backup recovery |T-005`
 - `test(permitExecution): add unit tests for eip-2612 permit simulation |T-003`
 - `docs(adr): document relayer architecture and containerization stack |T-001`
+
+### 3.5. Orchestrator & Cross-Repo Commit Convention
+
+Commits fall into two tiers that mirror the two-tier release in §1.5:
+
+1. **Target-repo commits** (the deliverable): follow §3.1–§3.4 inside the task
+   worktree of the target repository.
+2. **Orchestrator-repo commits** (task management — task files, `00_DASHBOARD.md`,
+   `01_context/` changes made directly in the orchestrator): also use Semantic
+   Commits with a management-oriented scope such as `backlog`, `review`,
+   `dashboard`, or `orchestration`, and the same trailing `|T-XXX` reference.
+   Example: `chore(review): promote T-007 to done and sync dashboard |T-007`.
+
+**Cross-repo tasks.** When a single task changes more than one target repo:
+
+- Each repository receives its own commit(s), and every such commit ends with the
+  same task ID reference (list all linked IDs when several tasks share the work,
+  e.g. `|T-011,T-012`).
+- Keep each repo's commit scoped to that repo's change; do not bundle unrelated
+  repos behind one message.
+- Record the cross-repo release set (repos, branches, and merged commit SHAs) in
+  the task's `# Review Log` so the distributed change is auditable from one place.
