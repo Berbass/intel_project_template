@@ -9,6 +9,8 @@ At the beginning of any AI agent session, you must **systematically** and **impe
 
 Additionally, if any other files or sub-files within `01_context/` (e.g., `01_context/glossary.md`, `01_context/adr/`, etc.) seem pertinent given the specific task at hand, they should also be read and taken into account from the beginning.
 
+Also skim `01_context/CHANGELOG.md` for a quick digest of recent changes to the shared knowledge base since your last session.
+
 ### Exception
 
 You may skip reading these files only if you are asked a simple question for which the full context to answer is **confidently** already available in the immediate conversation context.

@@ -57,9 +57,10 @@ $$\langle\text{type}\rangle/\langle\text{TASK\_ID}\rangle\text{-}\langle\text{sh
 
 1. **Pick Task:** Pick a task from `02_tasks/0_todo/` and move it to `02_tasks/1_in_progress/`.
 2. **Sync Context:** Before anything else, re-check the shared knowledge base for
-   changes since the previous task finished. At minimum, re-read `rules.md` and
-   the ADRs in `01_context/adr/` to catch any new or amended rules, decisions,
-   or constraints. Apply the latest guidance to the current task.
+   changes since the previous task finished. Skim `01_context/CHANGELOG.md` for a
+   quick digest of what changed, then re-read `rules.md` and the ADRs in
+   `01_context/adr/` to catch any new or amended rules, decisions, or
+   constraints. Apply the latest guidance to the current task.
 3. **Review Dependencies:** Before starting work, read the task's direct
    dependencies (its `dependencies` YAML field). For each one, review its task
    file, current status, **Agent Execution Log**, and any review notes, and take
@@ -210,6 +211,42 @@ on `main`.
 > **Reviewer independence:** The value of a review comes from re-deriving the
 > result, not re-reading the claim. Always reproduce validation and inspect the
 > real artefacts before approving.
+
+### 1.6. Source of Truth & Field Ownership
+
+Task state is tracked in two places — the per-task files under `02_tasks/**` and
+the registry in `00_DASHBOARD.md`. To keep them from drifting, exactly one is
+authoritative:
+
+- **Task files are the single source of truth.** A task's canonical state — its
+  lifecycle `status`, metadata (frontmatter), execution log, and review log —
+  lives in its `.md` file under `02_tasks/`. The file's **directory** (`0_todo/`,
+  `1_in_progress/`, `2_in_review/`, `3_done/`) and its `status` field are the
+  authoritative signal of where the task is.
+- **The dashboard is a derived, narrative view.** `00_DASHBOARD.md` summarizes and
+  narrates the backlog for humans; it is _aggregated from_ the task files and is
+  never authoritative. **When the dashboard and a task file disagree, the task
+  file wins** — fix the dashboard to match, not the other way around.
+- **Context changes are logged.** Notable changes to the shared knowledge base
+  (`01_context/`) are recorded in `01_context/CHANGELOG.md` per its entry
+  convention, so a new session can catch up without diffing history.
+
+**Field ownership.** Each frontmatter field has one owner; only its owner may
+change it, which keeps implementer and reviewer responsibilities from colliding
+(see the review protocol, §1.5):
+
+- **Implementer-owned** (set/updated while doing the work): `status` transitions
+  through `todo → in_progress → in_review`, `assigned_to`, `completion_percentage`,
+  `branch`, `base_commit`, `worktree`, `validation`, `last_updated`, and the
+  `# Agent Execution Log`.
+- **Reviewer-owned** (set only during review, §1.5): `review_status`,
+  `reviewed_by`, `reviewed_at`, the final `status: done` promotion (and the move
+  to `3_done/`), and the `# Review Log`.
+
+The implementer moves a task as far as `2_in_review/`; only a reviewer performs
+the final promotion to `done`. An implementer must not self-set the review fields
+or promote their own task, and a reviewer must not rewrite the execution log or
+metadata to mask a problem — request changes instead (§1.5 step 6).
 
 ---
 
