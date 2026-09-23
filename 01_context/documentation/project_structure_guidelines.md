@@ -12,7 +12,7 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 ```text
 📁 project-root/
 ├── 📁 01_context/                 # The "Knowledge Base" (Read-Only for task agents)
-│   ├── rules.md                   # Project rules & git submodule protocol
+│   ├── rules.md                   # Project rules & git worktree/submodule protocol
 │   ├── glossary.md                # Domain-specific and technical terminology
 │   ├── 📁 adr/                    # Architecture Decision Records (Historical choices)
 │   └── 📁 documentation/          # Project specifications and guidelines
@@ -23,8 +23,8 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 │   ├── 📁 1_in_progress/          # Tasks currently being worked on
 │   ├── 📁 2_in_review/            # Tasks awaiting QA or peer review
 │   └── 📁 3_done/                 # Completed and validated tasks
-├── 📁 03_workspace/               # The "Scratchpad" & Task Submodules
-│   └── 📁 T-015_repo_name/        # Isolated Git submodule for active task
+├── 📁 03_workspace/               # The "Scratchpad" & Task Worktrees
+│   └── 📁 T-015_repo_name/        # Isolated Git worktree for active task
 ├── 00_DASHBOARD.md                # Executive summary of project state
 └── README.md                      # Main entry point with links
 ```
@@ -37,6 +37,8 @@ This directory acts as the foundational knowledge for any AI agent joining the p
 
 - **Usage:** Before starting any task, agents are instructed to read relevant files here (`rules.md`, `project_structure_guidelines.md`, `glossary.md`, `global_specifications.md`) to align with project rules, tone, and historical decisions.
 - **The `adr/` subfolder:** Contains _Architecture Decision Records_. Every major choice (e.g., "Why we chose Flutter over React Native") is documented here as a numbered file (e.g., `001-frontend-framework.md`). This prevents agents from revisiting settled debates.
+
+    **ADR governance (immutability + supersede).** Accepted ADRs are immutable: never edit the Decision of an accepted ADR in place. When a new decision invalidates an accepted one, write a _new_ numbered ADR that links back to the one it replaces, and set the old ADR's Status to `Superseded by ADR-00X` while leaving its body intact as the historical record. **Trigger:** any change that invalidates an accepted ADR — a reversal, a material scope shift, or a technology/workflow pivot — requires a new ADR _before_ the change lands. For pivots, start from the template at `01_context/adr/template_pivot_adr.md`.
 
 ### 2. `02_tasks/` (The Engine)
 
@@ -78,19 +80,20 @@ _Notes regarding thought process, blockers, or execution details._
 
 1. An agent picks a file from `0_todo/`.
 2. The agent updates the YAML `status` to `in_progress` and **physically moves** the file to `1_in_progress/`.
-3. If code changes are required, the agent instantiates a Git submodule in `03_workspace/` (see section 3 below).
+3. If code changes are required, the agent instantiates a Git worktree in `03_workspace/` (see section 3 below); submodules are used only for the genuine multi-repo case.
 4. Once the Acceptance Criteria are met and tests pass, the agent updates `status` to `in_review` and moves the file to `2_in_review/`.
 5. A reviewer validates the work. If approved, it moves to `3_done/`.
 
-### 3. `03_workspace/` (The Scratchpad & Task Submodules)
+### 3. `03_workspace/` (The Scratchpad & Task Worktrees)
 
-Agents use this directory for drafting intermediate work, code experiments, and isolated repository submodules.
+Agents use this directory for drafting intermediate work, code experiments, and isolated per-task working directories.
 
-- **Git Submodule Strategy:** For any task involving code changes in an external repository (e.g., `repo_contracts`, `repo_backend`, `repo_app`), the agent creates a submodule inside `03_workspace/`.
+- **Git Worktree Strategy (default):** For a task changing a single target repository on its own branch, the agent creates a Git _worktree_ inside `03_workspace/`. Each task gets an isolated working directory and branch backed by one shared object store (see ADR-001 and `rules.md` §1). Submodules are reserved for the genuine multi-repo case.
 - **Directory Naming Strategy:**
   `03_workspace/<TASK_ID>_<repo_name>` (e.g., `03_workspace/T-015_repo_name`).
 - **Branch Naming Strategy:**
   `<type>/<TASK_ID>-<short-description>` (e.g., `feature/T-015-gasless-permit`, `fix/T-016-pin-crypto`).
+- **Setup / Teardown:** Always pair `git worktree add` with a mirrored `git worktree remove` + branch deletion once the task reaches `3_done/`, so the scratchpad never accumulates stale checkouts. See `rules.md` §1.3 for the exact commands.
 
 ### 4. `00_DASHBOARD.md` (The Overview)
 
