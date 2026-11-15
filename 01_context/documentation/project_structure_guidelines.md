@@ -16,6 +16,8 @@ By strictly adhering to this structure and the use of Markdown with YAML Frontma
 │   ├── glossary.md                # Domain-specific and technical terminology
 │   ├── CHANGELOG.md               # Curated digest of shared-knowledge-base changes
 │   ├── 📁 adr/                    # Architecture Decision Records (Historical choices)
+│   ├── 📁 assets/                 # Shared project assets (logos, reference URLs, legal info, etc.)
+│   │   └── references.md          # Canonical URLs, brand assets index, and legal/external links
 │   └── 📁 documentation/          # Project specifications and guidelines
 │       ├── global_specifications.md
 │       └── project_structure_guidelines.md
@@ -41,6 +43,8 @@ This directory acts as the foundational knowledge for any AI agent joining the p
 - **The `adr/` subfolder:** Contains _Architecture Decision Records_. Every major choice (e.g., "Why we chose Flutter over React Native") is documented here as a numbered file (e.g., `001-frontend-framework.md`). This prevents agents from revisiting settled debates.
 
     **ADR governance (immutability + supersede).** Accepted ADRs are immutable: never edit the Decision of an accepted ADR in place. When a new decision invalidates an accepted one, write a _new_ numbered ADR that links back to the one it replaces, and set the old ADR's Status to `Superseded by ADR-00X` while leaving its body intact as the historical record. **Trigger:** any change that invalidates an accepted ADR — a reversal, a material scope shift, or a technology/workflow pivot — requires a new ADR _before_ the change lands. For pivots, start from the template at `01_context/adr/template_pivot_adr.md`.
+
+- **The `assets/` subfolder:** Stores shared, project-wide assets and reference materials that benefit the project across tasks and repositories — such as brand logos and visual identity files, curated reference URLs/links (`references.md`), legal and compliance information, and other static project resources. Agents and contributors should check here before duplicating external references or branding/legal artifacts.
 
 ### 2. `02_tasks/` (The Engine)
 

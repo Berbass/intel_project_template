@@ -7,7 +7,7 @@ At the beginning of any AI agent session, you must **systematically** and **impe
 - `01_context/documentation/project_structure_guidelines.md`
 - `01_context/rules.md`
 
-Additionally, if any other files or sub-files within `01_context/` (e.g., `01_context/glossary.md`, `01_context/adr/`, etc.) seem pertinent given the specific task at hand, they should also be read and taken into account from the beginning.
+Additionally, if any other files or sub-files within `01_context/` (e.g., `01_context/glossary.md`, `01_context/adr/`, `01_context/assets/`, etc.) seem pertinent given the specific task at hand, they should also be read and taken into account from the beginning.
 
 Also skim `01_context/CHANGELOG.md` for a quick digest of recent changes to the shared knowledge base since your last session.
 

@@ -37,6 +37,10 @@ Rules:
 
 ## Log
 
+## 2026-11-15
+
+- Add `01_context/assets/` directory specification (with sample `references.md`) in `project_structure_guidelines.md` for storing shared project assets (logos, reference URLs, legal info, etc.)
+
 ## 2026-09-24
 
 - Establish the context CHANGELOG and formalize the source-of-truth model: task
